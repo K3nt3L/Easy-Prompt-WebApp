@@ -24,6 +24,7 @@ There are two versions: one in English, the other in French.
 <li>The "Split words" option splits a token into multiple tokens while retaining its color.</li>
 <li>Hold the Ctrl key and click on adjacent tokens to select multiple tokens. A "Merge tokens" option will appear in the context menu to merge them.</li>
 <li>After editing, click on "Validate" to obtain the final text with commas as the only separators, along with the total number of words displayed below.</li>
+<li>Double click on a box for editing content</li>
 </ol>
 
 
