@@ -3,6 +3,8 @@
 
 The application is just a simple HTML file with JS to manage the interface.
 
+*Une version française est disponible dans le repo.*
+
 As I was tired of copying and pasting while editing my prompts, I decided to create a small visual tool that allows me to color certain parts of the prompt, change the position of tokens by dragging and dropping, delete them, etc.
 For example, I use one color for everything related to the main subject, another for the style or medium, and another for the details. 
 
