@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Token Manipulation</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    #input-area {
+      width: 100%;
+      height: 80px;
+    }
+    .btn {
+      margin: 5px 0;
+      padding: 5px 10px;
+    }
+    #token-container {
+      border: 1px solid #ccc;
+      min-height: 150px;
+      padding: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .token {
+      padding: 5px 10px;
+      background: #e0f7fa;
+      border: 1px solid #00838f;
+      border-radius: 4px;
+      cursor: move;
+      user-select: none;
+      position: relative;
+    }
+    /* To indicate that a token is selected */
+    .token.selected {
+      border: 2px dashed #000;
+    }
+    .token.editing input {
+      font-size: 1em;
+    }
+    /* Custom context menu */
+    #custom-menu {
+      position: absolute;
+      background: #fff;
+      border: 1px solid #aaa;
+      box-shadow: 2px 2px 6px rgba(0,0,0,0.2);
+      z-index: 1000;
+      display: none;
+    }
+    #custom-menu .menu-item {
+      padding: 5px 10px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    #custom-menu .menu-item:hover {
+      background-color: #eee;
+    }
+    /* Area to display the validated text */
+    #result {
+      margin-top: 10px;
+      padding: 10px;
+      background: #f5f5f5;
+      border: 1px dotted #666;
+      white-space: pre-wrap;
+    }
+    /* Additional information */
+    #stats {
+      margin-top: 10px;
+      font-style: italic;
+    }
+    /* Instructions block */
+    #instructions {
+      margin-top: 20px;
+      padding: 10px;
+      background: #e8f5e9;
+      border: 1px solid #66bb6a;
+    }
+    #instructions-button {
+      margin-bottom: 10px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Token Manipulation</h1>
+  
+  <p>
+    Enter your text with tokens separated by commas or periods:
+  </p>
+  
+  <!-- Font size selection for the input area -->
+  <label for="font-size-select">Font size:</label>
+  <select id="font-size-select">
+    <option value="12px">Small (12px)</option>
+    <option value="14px" selected>Normal (14px)</option>
+    <option value="18px">Large (18px)</option>
+    <option value="24px">Extra large (24px)</option>
+  </select>
+  
+  <br><br>
+  <textarea id="input-area" placeholder="Example: fantasy art, digital illustration. majestic wizard, elderly wizard. long flowing white beard and hair, ..."></textarea>
+  <br>
+  <button id="loadTokens" class="btn">Load Tokens</button>
+  <br><br>
+  <div id="token-container"></div>
+  <br>
+  <button id="validate" class="btn">Validate</button>
+  <h3>Result Text:</h3>
+  <div id="result"></div>
+  <div id="stats"></div>
+
+  <!-- Custom context menu -->
+  <div id="custom-menu">
+    <div class="menu-item" id="split-token">Split words</div>
+    <div class="menu-item" id="add-token">Add token</div>
+    <!-- The "Merge tokens" option will be added dynamically when several tokens are selected -->
+    <div class="menu-item color-option" data-color="#2196F3">Blue</div>
+    <div class="menu-item color-option" data-color="#F44336">Red</div>
+    <div class="menu-item color-option" data-color="#4CAF50">Green</div>
+    <div class="menu-item color-option" data-color="#FFEB3B">Yellow</div>
+    <div class="menu-item color-option" data-color="#9C27B0">Purple</div>
+    <div class="menu-item color-option" data-color="#FF9800">Orange</div>
+  </div>
+
+  <!-- Instructions with toggle button -->
+  <div id="instructions">
+    <button id="instructions-button" class="btn">Hide Instructions</button>
+    <div id="instructions-text">
+      <h3>Instructions</h3>
+      <ul>
+        <li>Enter your text in the provided area using commas or periods to separate tokens.</li>
+        <li>Choose the font size for the text area using the dropdown menu.</li>
+        <li>Click on "Load Tokens" to convert the text into tokens.</li>
+        <li>You can move tokens by dragging and dropping or edit them by double-clicking.</li>
+        <li>To change a token's color, right-click to open the context menu and select one of the available colors.</li>
+        <li>The "Split words" option splits a token into multiple tokens while retaining its color.</li>
+        <li>Hold the Ctrl key and click on adjacent tokens to select multiple tokens. A "Merge tokens" option will appear in the context menu to merge them.</li>
+        <li>After editing, click on "Validate" to obtain the final text with commas as the only separators, along with the total number of words displayed below.</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    // Get references to DOM elements
+    const inputArea = document.getElementById('input-area');
+    const loadTokensBtn = document.getElementById('loadTokens');
+    const tokenContainer = document.getElementById('token-container');
+    const validateBtn = document.getElementById('validate');
+    const resultDiv = document.getElementById('result');
+    const statsDiv = document.getElementById('stats');
+    const customMenu = document.getElementById('custom-menu');
+    const fontSizeSelect = document.getElementById('font-size-select');
+    const instructionsButton = document.getElementById('instructions-button');
+    const instructionsText = document.getElementById('instructions-text');
+
+    const splitTokenMenuItem = document.getElementById('split-token');
+    const addTokenMenuItem = document.getElementById('add-token');
+
+    let dragSrcEl = null;
+    // To keep track of the token on which the right-click occurred
+    let contextTarget = null;
+
+    // Change the font size of the text area
+    fontSizeSelect.addEventListener('change', () => {
+      inputArea.style.fontSize = fontSizeSelect.value;
+    });
+    // Initialize the default font size
+    inputArea.style.fontSize = fontSizeSelect.value;
+
+    // Toggle button for showing/hiding instructions
+    instructionsButton.addEventListener('click', () => {
+      if (instructionsText.style.display === 'none') {
+        instructionsText.style.display = 'block';
+        instructionsButton.textContent = 'Hide Instructions';
+      } else {
+        instructionsText.style.display = 'none';
+        instructionsButton.textContent = 'Show Instructions';
+      }
+    });
+
+    // Function to create a token element (<div>)
+    function createToken(text) {
+      const tokenDiv = document.createElement('div');
+      tokenDiv.classList.add('token');
+      tokenDiv.textContent = text.trim();
+      tokenDiv.setAttribute('draggable', 'true');
+
+      // Drag & drop events
+      tokenDiv.addEventListener('dragstart', handleDragStart);
+      tokenDiv.addEventListener('dragover', handleDragOver);
+      tokenDiv.addEventListener('drop', handleDrop);
+      tokenDiv.addEventListener('dragend', handleDragEnd);
+
+      // Edit token on double-click
+      tokenDiv.addEventListener('dblclick', () => editToken(tokenDiv));
+
+      // Right-click to display the custom context menu
+      tokenDiv.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        contextTarget = tokenDiv;
+        showCustomMenu(e.pageX, e.pageY);
+      });
+
+      // Multiple selection: hold Ctrl and click to toggle "selected" class
+      tokenDiv.addEventListener('click', (e) => {
+        if (e.ctrlKey) {
+          tokenDiv.classList.toggle('selected');
+          e.stopPropagation();
+        }
+      });
+
+      return tokenDiv;
+    }
+
+    // Load tokens from the textarea
+    loadTokensBtn.addEventListener('click', () => {
+      tokenContainer.innerHTML = '';
+      // Split the text using commas AND periods as separators (using RegEx)
+      const tokens = inputArea.value.split(/[.,]/).map(t => t.trim()).filter(t => t.length > 0);
+      tokens.forEach(tokenText => {
+        const tokenElement = createToken(tokenText);
+        tokenContainer.appendChild(tokenElement);
+      });
+    });
+
+    // Validate and rebuild the text from the tokens in their current order
+    validateBtn.addEventListener('click', () => {
+      const tokens = Array.from(tokenContainer.querySelectorAll('.token')).map(el => el.textContent.trim());
+      // Rebuild the text using only commas as separators
+      const outputText = tokens.join(', ');
+      resultDiv.textContent = outputText;
+
+      // Count the total number of words (splitting by spaces)
+      let wordCount = 0;
+      tokens.forEach(token => {
+        wordCount += token.split(/\s+/).filter(w => w.length > 0).length;
+      });
+      statsDiv.textContent = "Total number of words: " + wordCount;
+    });
+
+    // Drag & Drop Event Handlers
+    function handleDragStart(e) {
+      dragSrcEl = this;
+      e.dataTransfer.effectAllowed = 'move';
+      // For Firefox
+      e.dataTransfer.setData('text/html', this.innerHTML);
+      this.style.opacity = '0.4';
+    }
+
+    function handleDragOver(e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      return false;
+    }
+
+    function handleDrop(e) {
+      e.stopPropagation();
+      if (dragSrcEl !== this) {
+        const container = tokenContainer;
+        const tokens = Array.from(container.children);
+        const dropIndex = tokens.indexOf(this);
+        container.removeChild(dragSrcEl);
+        const tokensNow = Array.from(container.children);
+        container.insertBefore(dragSrcEl, tokensNow[dropIndex] || null);
+      }
+      return false;
+    }
+
+    function handleDragEnd(e) {
+      this.style.opacity = '1';
+    }
+
+    // Edit a token: transform it into an <input> on double-click
+    function editToken(tokenEl) {
+      if (tokenEl.classList.contains('editing')) return;
+      tokenEl.classList.add('editing');
+      const currentText = tokenEl.textContent;
+      tokenEl.textContent = '';
+
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.value = currentText;
+      input.style.width = '100%';
+
+      input.addEventListener('blur', finishEdit);
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          finishEdit();
+        }
+      });
+      tokenEl.appendChild(input);
+      input.focus();
+
+      function finishEdit() {
+        tokenEl.textContent = input.value.trim() || "empty";
+        tokenEl.classList.remove('editing');
+      }
+    }
+
+    // Display the custom context menu at position (x, y)
+    function showCustomMenu(x, y) {
+      // If multiple tokens are selected, display the "Merge tokens" option
+      const selectedTokens = tokenContainer.querySelectorAll('.token.selected');
+      let mergeOption = document.getElementById("merge-tokens");
+      if (selectedTokens.length >= 2) {
+        if (!mergeOption) {
+          mergeOption = document.createElement('div');
+          mergeOption.id = "merge-tokens";
+          mergeOption.classList.add('menu-item');
+          mergeOption.textContent = "Merge tokens";
+          mergeOption.addEventListener('click', mergeSelectedTokens);
+          customMenu.appendChild(mergeOption);
+        }
+      } else {
+        if (mergeOption) {
+          mergeOption.remove();
+        }
+      }
+      customMenu.style.left = x + "px";
+      customMenu.style.top = y + "px";
+      customMenu.style.display = 'block';
+    }
+
+    function hideCustomMenu() {
+      customMenu.style.display = 'none';
+      contextTarget = null;
+    }
+
+    // Option "Split words": split the token into words while keeping its original color
+    splitTokenMenuItem.addEventListener('click', () => {
+      if (contextTarget) {
+        const text = contextTarget.textContent.trim();
+        const words = text.split(/\s+/).filter(w => w.length > 0);
+        const parent = contextTarget.parentNode;
+        words.forEach(word => {
+          const newToken = createToken(word);
+          // Preserve the original token's color
+          newToken.style.backgroundColor = contextTarget.style.backgroundColor;
+          parent.insertBefore(newToken, contextTarget);
+        });
+        parent.removeChild(contextTarget);
+      }
+      hideCustomMenu();
+    });
+
+    // Option "Add token"
+    addTokenMenuItem.addEventListener('click', () => {
+      const newText = prompt("Enter the new token (one or more words):", "");
+      if (newText !== null && newText.trim() !== "") {
+        const newToken = createToken(newText);
+        if (contextTarget && contextTarget.parentNode === tokenContainer) {
+          if (contextTarget.nextSibling) {
+            tokenContainer.insertBefore(newToken, contextTarget.nextSibling);
+          } else {
+            tokenContainer.appendChild(newToken);
+          }
+        } else {
+          tokenContainer.appendChild(newToken);
+        }
+      }
+      hideCustomMenu();
+    });
+
+    // Color options: immediately change the token's color
+    document.querySelectorAll('.color-option').forEach(item => {
+      item.addEventListener('click', (e) => {
+        if (contextTarget) {
+          const chosenColor = e.target.getAttribute('data-color');
+          contextTarget.style.backgroundColor = chosenColor;
+        }
+        hideCustomMenu();
+      });
+    });
+
+    // Merge the selected tokens
+    function mergeSelectedTokens() {
+      const selected = Array.from(tokenContainer.querySelectorAll('.token.selected'));
+      if (selected.length < 2) {
+        alert("Please select at least two tokens.");
+        hideCustomMenu();
+        return;
+      }
+      // Get the order of tokens in the container
+      const children = Array.from(tokenContainer.children);
+      const selectedIndices = selected.map(token => children.indexOf(token)).sort((a, b) => a - b);
+      // Check that the selected tokens are adjacent
+      for (let i = 1; i < selectedIndices.length; i++) {
+        if (selectedIndices[i] !== selectedIndices[i - 1] + 1) {
+          alert("Selected tokens are not adjacent!");
+          hideCustomMenu();
+          return;
+        }
+      }
+      // Concatenate texts with a space
+      const mergedText = selected.map(token => token.textContent).join(' ');
+      // Use the color of the first selected token
+      const color = selected[0].style.backgroundColor;
+      const newToken = createToken(mergedText);
+      newToken.style.backgroundColor = color;
+      // Insert the new token in place of the first selected one
+      const firstToken = selected[0];
+      tokenContainer.insertBefore(newToken, firstToken);
+      // Remove the merged tokens
+      selected.forEach(token => token.remove());
+      hideCustomMenu();
+    }
+
+    // Hide the custom context menu on any click that is not a right-click
+    document.addEventListener('click', (e) => {
+      if (e.button !== 2) {
+        hideCustomMenu();
+      }
+    });
+
+    // If a right-click occurs on the background of the token container
+    tokenContainer.addEventListener('contextmenu', (e) => {
+      if (e.target === tokenContainer) {
+        e.preventDefault();
+        contextTarget = null;
+        showCustomMenu(e.pageX, e.pageY);
+      }
+    });
+  </script>
+</body>
+</html>
