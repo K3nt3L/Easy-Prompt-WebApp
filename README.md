@@ -1,5 +1,5 @@
 # Easy-Prompt-WebApp
-<H1>A simple HTML/JS application to visually manipulate your prompt.</H1>
+<H1>A simple HTML/JS application to visually manipulate your SDXL prompt.</H1>
 
 The application is just a simple HTML file with JS to manage the interface.
 
@@ -18,6 +18,7 @@ There are two versions: one in English, the other in French.
 <li>Hold the Ctrl key and click on adjacent tokens to select multiple tokens. A "Merge tokens" option will appear in the context menu to merge them.</li>
 <li>After editing, click on "Validate" to obtain the final text with commas as the only separators, along with the total number of words displayed below.</li>
 </ol>
+
 
 ![screenshot](https://github.com/K3nt3L/Easy-Prompt-WebApp/blob/main/easy_prompt_screenshot.jpg)
 
