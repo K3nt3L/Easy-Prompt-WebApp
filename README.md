@@ -31,4 +31,29 @@ There are two versions: one in English, the other in French.
 ![screenshot](https://github.com/K3nt3L/Easy-Prompt-WebApp/blob/main/easy_prompt_screenshot.jpg)
 
 
+<H3>New in Update 1.3</H3>
+
+<ol>
+ <li>There are now two text input fields: one for the positive prompt, the other for the negative prompt.</li> 
+  <li>The context menu has been fixed to add the ability to delete a token.</li>
+  <li>After editing and validating both prompts, it is possible to export the entire set into a text file compatible with Inspire Pack.</li>
+</ol>
+
+What's the Inspire pack format : 
+
+It is a plain text file that combines the positive prompt and the negative prompt in the following format:
+
+---
+
+positive:token1, token2
+
+negative:token_n1, token_n2
+
+---
+
+You can find the nodes here :
+
+[Inspire Pack for ComfyUI] (https://github.com/ltdrdata/ComfyUI-Inspire-Pack "by Dr.Lt.Data")
+
+
 
